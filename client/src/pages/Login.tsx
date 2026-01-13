@@ -1,76 +1,81 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
 export default function Login() {
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // 模擬登入驗證 (實際應用中應使用更安全的方式)
-    setTimeout(() => {
-      if (password === "moti2026") {
-        localStorage.setItem("moti_auth", "true");
-        toast.success("登入成功");
-        setLocation("/");
-      } else {
-        toast.error("密碼錯誤");
-      }
-      setIsLoading(false);
-    }, 800);
+    // 簡易密碼驗證
+    if (password === "moti2026") {
+      localStorage.setItem("isAuthenticated", "true");
+      toast.success("登入成功", {
+        description: "歡迎回到 MOTI 客戶管理系統",
+      });
+      setLocation("/");
+    } else {
+      toast.error("登入失敗", {
+        description: "密碼錯誤，請重試",
+      });
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 z-0 opacity-10 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/login-bg.png')" }}
-      />
-      
-      <div className="relative z-10 w-full max-w-md px-4">
-        <div className="flex justify-center mb-8">
-          <img src="/images/logo.png" alt="MOTI Logo" className="h-16 object-contain" />
-        </div>
-        
-        <Card className="w-full shadow-lg border-slate-200">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold text-slate-900">MOTI 客戶管理系統</CardTitle>
-            <CardDescription>請輸入存取密碼以繼續</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin}>
-              <div className="grid w-full items-center gap-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="password">密碼</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    placeholder="請輸入密碼" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="bg-white"
-                  />
-                </div>
-              </div>
-              <Button className="w-full mt-6 bg-slate-900 hover:bg-slate-800" type="submit" disabled={isLoading}>
-                {isLoading ? "驗證中..." : "登入系統"}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-xs text-slate-500">© 2026 MOTI. All rights reserved.</p>
-          </CardFooter>
-        </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden">
+      {/* 背景裝飾 */}
+      <div className="absolute inset-0 z-0 opacity-10">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-[#002B5C] rounded-full filter blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#4A90E2] rounded-full filter blur-3xl translate-x-1/2 translate-y-1/2"></div>
       </div>
+
+      <Card className="w-full max-w-md z-10 shadow-xl border-t-4 border-t-[#002B5C]">
+        <CardHeader className="text-center space-y-4 pb-8">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/images/logo.png" 
+              alt="MOTI Logo" 
+              className="h-16 object-contain"
+            />
+          </div>
+          <CardTitle className="text-2xl font-bold text-[#002B5C]">
+            MOTI 客戶管理系統
+          </CardTitle>
+          <p className="text-sm text-gray-500">
+            請輸入存取密碼以繼續
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                密碼
+              </label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="請輸入密碼"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full bg-[#002B5C] hover:bg-[#001F42] text-white transition-colors"
+            >
+              登入系統
+            </Button>
+          </form>
+          <div className="mt-8 text-center text-xs text-gray-400">
+            &copy; 2026 MOTI. All rights reserved.
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
