@@ -14,14 +14,10 @@ import { useHashLocation } from "wouter/use-hash-location";
 
 function Router() {
   // 使用 hash location 來避免 GitHub Pages 的路由問題
-  // 或者如果使用 path location，需要確保 base path 正確
-  // 這裡我們保持使用預設的 path location，但配合 404.html hack
-  
-  // 為了確保在子目錄下也能正常運作，我們需要設定 base path
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  // 這是最穩定可靠的解決方案，不需要 404 hack
   
   return (
-    <WouterRouter base={base}>
+    <WouterRouter hook={useHashLocation}>
       <Switch>
         <Route path="/login" component={Login} />
         <Route path="/" component={() => <ProtectedRoute component={Home} />} />

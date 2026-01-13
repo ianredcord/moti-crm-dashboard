@@ -13,7 +13,7 @@ export default function Login() {
     e.preventDefault();
     // 簡易密碼驗證
     if (password === "moti2026") {
-      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("moti_auth", "true"); // Fix: Use consistent key "moti_auth"
       toast.success("登入成功", {
         description: "歡迎回到 MOTI 客戶管理系統",
       });
