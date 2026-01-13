@@ -1,37 +1,33 @@
 import Papa from "papaparse";
 
-// 注意：這需要您將 Google Sheets 發布為 CSV (檔案 > 分享 > 發布到網路 > 選擇工作表 > CSV)
-// 這是最簡單且免費的讀取方式，不需要 API Key
-const SHEET_ID = "1qjCOwTDooEkuH1qvj9M_0aUHFKGAeqaLzR6UCkikv2w";
-
-// 各工作表的 GID (需要從瀏覽器網址列查看 gid=xxx)
-// 這裡先假設預設 GID，實際部署時需要您提供正確的 GID
-const SHEETS_CONFIG = {
-  DASHBOARD: "0",      // 儀表板
-  SALES_A: "123456",   // A類-直銷案件追蹤 (需替換)
-  SALES_B: "234567",   // B類-通路案件追蹤 (需替換)
+// Google Sheets 發布連結
+const CSV_URLS = {
+  CASES_A: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQwnVaHGKH1CCuKzjv_eAkW4QB_aGifKy0Q3yCpMTaHj9lFthiPQr9s9rd9eUnqLphKg_0HNQa0ntth/pub?gid=128701739&single=true&output=csv"
 };
 
 export interface Case {
   id: string;
   customer: string;
+  company: string;
   stage: string;
   sales: string;
   lastUpdate: string;
-  // ... 其他欄位
+  type: 'A' | 'B';
+  contactDate: string;
+  demoDate: string;
+  amount: string;
 }
 
-export async function fetchSheetData(sheetName: keyof typeof SHEETS_CONFIG) {
-  const gid = SHEETS_CONFIG[sheetName];
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
-
+export async function fetchSheetData(type: keyof typeof CSV_URLS) {
   try {
+    const url = CSV_URLS[type];
     const response = await fetch(url);
     const csvText = await response.text();
     
-    return new Promise((resolve, reject) => {
+    return new Promise<any[]>((resolve, reject) => {
       Papa.parse(csvText, {
         header: true,
+        skipEmptyLines: true,
         complete: (results) => {
           resolve(results.data);
         },
@@ -44,4 +40,19 @@ export async function fetchSheetData(sheetName: keyof typeof SHEETS_CONFIG) {
     console.error("Error fetching sheet data:", error);
     return [];
   }
+}
+
+export function processCasesData(rawData: any[]): Case[] {
+  return rawData.map(row => ({
+    id: row['案件編號'] || '',
+    customer: row['客戶名稱'] || '未命名客戶',
+    company: row['公司名稱'] || '',
+    stage: row['目前階段'] || '待聯絡',
+    sales: row['業務專員B'] || '',
+    lastUpdate: row['最後更新日'] || '',
+    type: 'A',
+    contactDate: row['首次聯絡時間'] || '',
+    demoDate: row['Demo日期'] || '',
+    amount: row['報價金額'] || '0'
+  }));
 }

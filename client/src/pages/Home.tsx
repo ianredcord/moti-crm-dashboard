@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchSheetData } from "@/lib/googleSheets";
+import { fetchSheetData, processCasesData, Case } from "@/lib/googleSheets";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,16 +57,56 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [sheetData, setSheetData] = useState<any>(null);
 
+  const [stats, setStats] = useState(MOCK_DATA.stats);
+  const [funnelData, setFunnelData] = useState(MOCK_DATA.funnel);
+  const [cases, setCases] = useState<Case[]>([]);
+
   useEffect(() => {
     async function loadData() {
       try {
-        // 嘗試載入 Google Sheets 資料
-        // 注意：這裡需要替換為實際的 Sheet ID 和 GID
-        // const data = await fetchSheetData("DASHBOARD");
-        // setSheetData(data);
+        const rawData = await fetchSheetData("CASES_A");
+        const processedCases = processCasesData(rawData);
+        setCases(processedCases);
         
-        // 暫時使用模擬數據，等待實際連接
-        setTimeout(() => setLoading(false), 1000);
+        // 計算統計數據
+        if (processedCases.length > 0) {
+          // 1. 待聯絡案件
+          const pendingContact = processedCases.filter(c => c.stage === '待聯絡').length;
+          
+          // 2. 本週新名單 (假設最近 7 天)
+          // 這裡簡化處理，實際應解析日期
+          const newLeads = processedCases.length;
+
+          // 更新統計卡片
+          setStats(prev => [
+            prev[0], // 直銷目標維持模擬 (因為沒有目標數據)
+            prev[1], // 經銷目標維持模擬
+            { 
+              title: "待聯絡案件", 
+              value: pendingContact.toString(), 
+              sub: "需盡快處理", 
+              icon: AlertCircle, 
+              color: "text-red-600" 
+            },
+            { 
+              title: "總案件數", 
+              value: newLeads.toString(), 
+              sub: "A類直銷案件", 
+              icon: Users, 
+              color: "text-purple-600" 
+            }
+          ]);
+
+          // 更新漏斗圖
+          const stages = ['待聯絡', '已聯絡', 'Demo排程', 'Demo完成', '報價中', '成交'];
+          const newFunnel = stages.map(stage => ({
+            name: stage,
+            value: processedCases.filter(c => c.stage === stage).length
+          }));
+          setFunnelData(newFunnel);
+        }
+        
+        setLoading(false);
       } catch (error) {
         console.error("Failed to load sheet data", error);
         setLoading(false);
@@ -149,7 +189,7 @@ export default function Home() {
 
             {/* 關鍵數據卡片 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {MOCK_DATA.stats.map((stat, index) => (
+              {stats.map((stat, index) => (
                 <Card key={index} className="border-l-4 border-l-[#002B5C] shadow-sm hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -173,7 +213,7 @@ export default function Home() {
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={MOCK_DATA.funnel}
+                      data={funnelData}
                       layout="vertical"
                       margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                     >
@@ -226,24 +266,27 @@ export default function Home() {
               <div className="bg-gray-100 p-4 rounded-lg">
                 <h3 className="font-bold text-gray-700 mb-4 flex items-center">
                   <span className="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                  待聯絡 (5)
+                  待聯絡 ({cases.filter(c => c.stage === '待聯絡').length})
                 </h3>
                 <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
+                  {cases.filter(c => c.stage === '待聯絡').map((c, i) => (
                     <Card key={i} className="cursor-pointer hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-xs font-bold text-[#002B5C] bg-blue-50 px-2 py-1 rounded">A類</span>
-                          <span className="text-xs text-gray-400">2小時前</span>
+                          <span className="text-xs text-gray-400">{c.lastUpdate}</span>
                         </div>
-                        <h4 className="font-bold text-gray-800 mb-1">王大明醫師</h4>
-                        <p className="text-sm text-gray-500 mb-3">大安骨科診所</p>
+                        <h4 className="font-bold text-gray-800 mb-1">{c.customer}</h4>
+                        <p className="text-sm text-gray-500 mb-3">{c.company}</p>
                         <div className="flex justify-between items-center text-xs text-gray-500">
-                          <span>負責人: 業務B</span>
+                          <span>負責人: {c.sales}</span>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
+                  {cases.filter(c => c.stage === '待聯絡').length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-4">目前沒有待聯絡案件</p>
+                  )}
                 </div>
               </div>
 
@@ -251,24 +294,27 @@ export default function Home() {
               <div className="bg-gray-100 p-4 rounded-lg">
                 <h3 className="font-bold text-gray-700 mb-4 flex items-center">
                   <span className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span>
-                  Demo 排程 (3)
+                  Demo 排程 ({cases.filter(c => c.stage === 'Demo排程').length})
                 </h3>
                 <div className="space-y-3">
-                  {[1, 2].map((i) => (
+                  {cases.filter(c => c.stage === 'Demo排程').map((c, i) => (
                     <Card key={i} className="cursor-pointer hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-xs font-bold text-[#002B5C] bg-blue-50 px-2 py-1 rounded">A類</span>
-                          <span className="text-xs text-gray-400">明天 14:00</span>
+                          <span className="text-xs text-gray-400">{c.demoDate}</span>
                         </div>
-                        <h4 className="font-bold text-gray-800 mb-1">李小美治療師</h4>
-                        <p className="text-sm text-gray-500 mb-3">永和物理治療所</p>
+                        <h4 className="font-bold text-gray-800 mb-1">{c.customer}</h4>
+                        <p className="text-sm text-gray-500 mb-3">{c.company}</p>
                         <div className="flex justify-between items-center text-xs text-gray-500">
-                          <span>負責人: 業務B</span>
+                          <span>負責人: {c.sales}</span>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
+                  {cases.filter(c => c.stage === 'Demo排程').length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-4">目前沒有 Demo 排程</p>
+                  )}
                 </div>
               </div>
 
@@ -276,24 +322,27 @@ export default function Home() {
               <div className="bg-gray-100 p-4 rounded-lg">
                 <h3 className="font-bold text-gray-700 mb-4 flex items-center">
                   <span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                  報價中 (2)
+                  報價中 ({cases.filter(c => c.stage === '報價中').length})
                 </h3>
                 <div className="space-y-3">
-                  {[1].map((i) => (
+                  {cases.filter(c => c.stage === '報價中').map((c, i) => (
                     <Card key={i} className="cursor-pointer hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-xs font-bold text-[#002B5C] bg-blue-50 px-2 py-1 rounded">A類</span>
-                          <span className="text-xs text-gray-400">3天前</span>
+                          <span className="text-xs text-gray-400">{c.lastUpdate}</span>
                         </div>
-                        <h4 className="font-bold text-gray-800 mb-1">張志明院長</h4>
-                        <p className="text-sm text-gray-500 mb-3">板橋復健科</p>
+                        <h4 className="font-bold text-gray-800 mb-1">{c.customer}</h4>
+                        <p className="text-sm text-gray-500 mb-3">{c.company}</p>
                         <div className="flex justify-between items-center text-xs text-gray-500">
-                          <span>金額: $350,000</span>
+                          <span>金額: {c.amount}</span>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
+                  {cases.filter(c => c.stage === '報價中').length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-4">目前沒有報價中案件</p>
+                  )}
                 </div>
               </div>
             </div>
